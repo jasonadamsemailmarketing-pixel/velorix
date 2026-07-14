@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Velorix Lead Engine — AI Lead Qualification Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #070B14;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #F1F5F9;
+    padding-bottom: 60px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  @keyframes countUp { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes barFill { from { width: 0; } to { width: var(--target-width); } }
+
+  /* Header */
+  .header {
+    border-bottom: 1px solid #1E2D47;
+    background: linear-gradient(180deg, #0E1524 0%, #070B14 100%);
+    padding: 40px 24px 32px;
+    text-align: center;
+  }
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-bottom: 16px; padding: 4px 12px;
+    background: #0EA5E920; border: 1px solid #0EA5E930;
+    border-radius: 20px;
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #10B981; box-shadow: 0 0 6px #10B981;
+  }
+  .live-text { font-size: 11px; color: #0EA5E9; letter-spacing: 2px; text-transform: uppercase; }
+  h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px; }
+  h1 span { color: #0EA5E9; }
+  .subtitle { color: #64748B; font-size: 15px; max-width: 480px; margin: 0 auto; }
+
+  /* Layout */
+  .container { max-width: 900px; margin: 0 auto; padding: 32px 24px 0; }
+
+  /* Cards */
+  .card {
+    background: #131D30; border: 1px solid #1E2D47;
+    border-radius: 16px; padding: 28px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 16px; font-weight: 700; margin-bottom: 24px; }
+
+  /* Form Grid */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+  .field { margin-bottom: 16px; }
+  label { font-size: 12px; color: #64748B; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: block; }
+  input, select, textarea {
+    width: 100%; padding: 10px 14px;
+    background: #0E1524; border: 1px solid #1E2D47;
+    border-radius: 8px; color: #F1F5F9; font-size: 14px;
+    outline: none; font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: #0EA5E9; }
+  textarea { min-height: 80px; resize: vertical; line-height: 1.5; }
+  select { cursor: pointer; }
+  select option { background: #131D30; }
+
+  /* Divider */
+  .bant-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 8px 0 20px;
+  }
+  .bant-divider hr { flex: 1; border: none; border-top: 1px solid #1E2D47; }
+  .bant-label { font-size: 11px; color: #0EA5E9; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+
+  /* Submit Button */
+  .submit-btn {
+    width: 100%; padding: 14px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #0EA5E9, #06B6D4);
+    color: #fff; font-size: 15px; font-weight: 700;
+    cursor: pointer; letter-spacing: 0.3px;
+    box-shadow: 0 4px 20px #0EA5E940;
+    transition: all 0.2s; font-family: inherit;
+  }
+  .submit-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px #0EA5E950; }
+  .submit-btn:disabled {
+    background: #1E2D47; color: #64748B;
+    cursor: not-allowed; transform: none; box-shadow: none;
+  }
+
+  /* Error */
+  .error-box {
+    padding: 10px 14px; background: #EF444415;
+    border: 1px solid #EF444440; border-radius: 8px;
+    color: #EF4444; font-size: 13px; margin-bottom: 16px;
+  }
+
+  /* Spinner */
+  .spinner-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 40px 0; }
+  .spinner {
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 3px solid #1E2D47; border-top: 3px solid #0EA5E9;
+    animation: spin 0.8s linear infinite;
+  }
+  .spinner-text { color: #64748B; font-size: 14px; }
+
+  /* Results */
+  .results { animation: fadeIn 0.5s ease; }
+  .result-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+  }
+  .result-meta p { color: #64748B; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
+  .result-meta h2 { font-size: 22px; font-weight: 800; }
+
+  /* Tier Badge */
+  .tier-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700;
+  }
+  .tier-hot { color: #10B981; background: #10B98120; border: 1px solid #10B98140; }
+  .tier-warm { color: #F59E0B; background: #F59E0B20; border: 1px solid #F59E0B40; }
+  .tier-cold { color: #EF4444; background: #EF444420; border: 1px solid #EF444440; }
+
+  /* Score Layout */
+  .score-layout { display: grid; grid-template-columns: 140px 1fr; gap: 32px; align-items: center; }
+  @media (max-width: 600px) { .score-layout { grid-template-columns: 1fr; } }
+
+  /* Score Ring */
+  .score-ring-wrap { position: relative; width: 140px; height: 140px; margin: 0 auto; }
+  .score-ring-wrap svg { transform: rotate(-90deg); }
+  .score-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .score-number { font-size: 36px; font-weight: 800; line-height: 1; }
+  .score-denom { font-size: 11px; color: #64748B; letter-spacing: 2px; text-transform: uppercase; }
+
+  /* Summary */
+  .summary-text { font-size: 14px; color: #94A3B8; line-height: 1.7; margin-bottom: 16px; }
+  .next-step-box {
+    padding: 12px 16px; background: #0EA5E920;
+    border: 1px solid #0EA5E930; border-radius: 10px;
+  }
+  .next-step-label { font-size: 11px; color: #0EA5E9; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-weight: 700; }
+  .next-step-text { font-size: 14px; color: #F1F5F9; }
+
+  /* Two Column */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+  .right-col { display: flex; flex-direction: column; gap: 16px; }
+
+  /* BANT Bar */
+  .bant-section h3 { font-size: 13px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; }
+  .bant-row { margin-bottom: 10px; }
+  .bant-row-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .bant-row-label { font-size: 11px; color: #64748B; text-transform: uppercase; letter-spacing: 1px; }
+  .bant-row-val { font-size: 11px; color: #0EA5E9; }
+  .bant-track { height: 4px; background: #1E2D47; border-radius: 2px; overflow: hidden; }
+  .bant-fill {
+    height: 100%; background: linear-gradient(90deg, #0EA5E9, #06B6D4);
+    border-radius: 2px; width: 0;
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* Strengths / Risks */
+  .str-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .str-green { color: #10B981; }
+  .str-amber { color: #F59E0B; }
+  .bullet-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .bullet-dot { font-size: 12px; margin-top: 2px; flex-shrink: 0; }
+  .bullet-text { font-size: 13px; color: #F1F5F9; line-height: 1.5; }
+
+  /* Reset Button */
+  .reset-btn {
+    padding: 10px 24px; background: transparent;
+    border: 1px solid #1E2D47; border-radius: 8px;
+    color: #64748B; font-size: 13px; cursor: pointer;
+    font-family: inherit; transition: border-color 0.2s;
+  }
+  .reset-btn:hover { border-color: #0EA5E9; color: #0EA5E9; }
+
+  /* Footer */
+  .footer {
+    text-align: center; margin-top: 48px; padding-top: 24px;
+    border-top: 1px solid #1E2D47;
+  }
+  .footer p { font-size: 12px; color: #64748B; }
+  .footer span { color: #0EA5E9; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="live-badge">
+    <div class="live-dot"></div>
+    <span class="live-text">Live AI Demo</span>
+  </div>
+  <h1>Velorix <span>Lead Engine</span></h1>
+  <p class="subtitle">Submit your lead details and watch Gemini AI qualify it in real time using BANT scoring — exactly as built in production.</p>
+</div>
+
+<div class="container">
+
+  <!-- Form Card -->
+  <div class="card" id="formCard">
+    <h2>Lead Intake Form</h2>
+
+    <div class="form-grid">
+      <div class="field">
+        <label>Full Name *</label>
+        <input type="text" id="fullName" placeholder="Sarah Mitchell" />
+      </div>
+      <div class="field">
+        <label>Work Email *</label>
+        <input type="email" id="email" placeholder="sarah@company.com" />
+      </div>
+      <div class="field">
+        <label>Company Name *</label>
+        <input type="text" id="company" placeholder="Growth Ventures" />
+      </div>
+      <div class="field">
+        <label>Phone Number</label>
+        <input type="text" id="phone" placeholder="+1 555 000 0000" />
+      </div>
+    </div>
+
+    <div class="bant-divider">
+      <hr /><span class="bant-label">BANT Qualification</span><hr />
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label>Budget *</label>
+        <select id="budget">
+          <option value="">Select budget range</option>
+          <option>Under $10,000</option>
+          <option>$10,000 – $50,000</option>
+          <option>$50,000 – $100,000</option>
+          <option>Over $100,000</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Role in Decision *</label>
+        <select id="authority">
+          <option value="">Select your role</option>
+          <option>Decision Maker</option>
+          <option>Key Influencer</option>
+          <option>Evaluating Options</option>
+          <option>Just Researching</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>What challenge are you trying to solve? *</label>
+      <textarea id="need" placeholder="Describe your core business challenge or need…"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Implementation Timeline *</label>
+      <select id="timeline">
+        <option value="">When do you need this?</option>
+        <option>Immediately</option>
+        <option>Within 1–3 months</option>
+        <option>Within 3–6 months</option>
+        <option>6+ months away</option>
+      </select>
+    </div>
+
+    <div id="errorBox" class="error-box" style="display:none;"></div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitLead()">
+      ⚡ Score This Lead with AI
+    </button>
+  </div>
+
+  <!-- Spinner -->
+  <div class="card" id="spinnerCard" style="display:none;">
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+      <p class="spinner-text">Gemini AI is analysing your lead…</p>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="resultsSection" style="display:none;" class="results">
+
+    <!-- Score Card -->
+    <div class="card">
+      <div class="result-header">
+        <div class="result-meta">
+          <p>AI Qualification Result</p>
+          <h2 id="resultName"></h2>
+        </div>
+        <div id="tierBadge" class="tier-badge"></div>
+      </div>
+
+      <div class="score-layout">
+        <div class="score-ring-wrap">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="54" fill="none" stroke="#1E2D47" stroke-width="10"/>
+            <circle id="scoreCircle" cx="70" cy="70" r="54" fill="none"
+              stroke="#10B981" stroke-width="10"
+              stroke-dasharray="339.29" stroke-dashoffset="339.29"
+              stroke-linecap="round"
+              style="transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); filter: drop-shadow(0 0 6px #10B981)"/>
+          </svg>
+          <div class="score-center">
+            <span class="score-number" id="scoreNumber" style="color:#10B981;">–</span>
+            <span class="score-denom">/ 10</span>
+          </div>
+        </div>
+
+        <div>
+          <p class="summary-text" id="summaryText"></p>
+          <div class="next-step-box">
+            <p class="next-step-label">Recommended Next Step</p>
+            <p class="next-step-text" id="nextStepText"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BANT + Strengths/Risks -->
+    <div class="two-col">
+      <div class="card bant-section">
+        <h3>BANT Breakdown</h3>
+        <div class="bant-row">
+          <div class="bant-row-header">
+            <span class="bant-row-label">Budget</span>
+            <span class="bant-row-val" id="bBudget">0/3</span>
+          </div>
+          <div class="bant-track"><div class="bant-fill" id="bBudgetBar"></div></div>
+        </div>
+        <div class="bant-row">
+          <div class="bant-row-header">
+            <span class="bant-row-label">Authority</span>
+            <span class="bant-row-val" id="bAuthority">0/3</span>
+          </div>
+          <div class="bant-track"><div class="bant-fill" id="bAuthorityBar"></div></div>
+        </div>
+        <div class="bant-row">
+          <div class="bant-row-header">
+            <span class="bant-row-label">Need</span>
+            <span class="bant-row-val" id="bNeed">0/3</span>
+          </div>
+          <div class="bant-track"><div class="bant-fill" id="bNeedBar"></div></div>
+        </div>
+        <div class="bant-row">
+          <div class="bant-row-header">
+            <span class="bant-row-label">Timeline</span>
+            <span class="bant-row-val" id="bTimeline">0/3</span>
+          </div>
+          <div class="bant-track"><div class="bant-fill" id="bTimelineBar"></div></div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <div class="card" style="flex:1;">
+          <p class="str-label str-green">✓ Strengths</p>
+          <div id="strengthsList"></div>
+        </div>
+        <div class="card" style="flex:1;">
+          <p class="str-label str-amber">⚠ Risks</p>
+          <div id="risksList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:24px;">
+      <button class="reset-btn" onclick="resetForm()">Score another lead →</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>Built by <span>Adams</span> · Powered by Gemini AI · Stack: Tally · Zapier · Pipedrive · Hunter.io · Pipedream</p>
+  </div>
+
+</div>
+
+<script>
+const CIRCUMFERENCE = 2 * Math.PI * 54;
+
+function getColor(tier) {
+  return tier === 'Hot' ? '#10B981' : tier === 'Warm' ? '#F59E0B' : '#EF4444';
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = msg;
+  box.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('errorBox').style.display = 'none';
+}
+
+function setLoading(on) {
+  document.getElementById('spinnerCard').style.display = on ? 'block' : 'none';
+  document.getElementById('submitBtn').disabled = on;
+  document.getElementById('submitBtn').textContent = on ? 'Analysing Lead…' : '⚡ Score This Lead with AI';
+}
+
+function renderResults(data, name, company) {
+  const color = getColor(data.tier);
+  const score = data.score;
+
+  // Name
+  document.getElementById('resultName').textContent = `${name} — ${company}`;
+
+  // Tier badge
+  const badge = document.getElementById('tierBadge');
+  const icons = { Hot: '🔥', Warm: '⚡', Cold: '❄️' };
+  badge.textContent = `${icons[data.tier] || ''} ${data.tier} Lead`;
+  badge.className = `tier-badge tier-${data.tier.toLowerCase()}`;
+
+  // Score ring
+  const circle = document.getElementById('scoreCircle');
+  circle.style.stroke = color;
+  circle.style.filter = `drop-shadow(0 0 6px ${color})`;
+  setTimeout(() => {
+    const offset = CIRCUMFERENCE - (score / 10) * CIRCUMFERENCE;
+    circle.style.strokeDashoffset = offset;
+  }, 100);
+
+  // Score number
+  const numEl = document.getElementById('scoreNumber');
+  numEl.style.color = color;
+  let current = 0;
+  const interval = setInterval(() => {
+    current += 0.3;
+    if (current >= score) { numEl.textContent = score; clearInterval(interval); return; }
+    numEl.textContent = Math.floor(current);
+  }, 30);
+
+  // Summary & next step
+  document.getElementById('summaryText').textContent = data.summary;
+  document.getElementById('nextStepText').textContent = data.nextStep;
+
+  // BANT bars
+  const bants = [
+    ['bBudget', 'bBudgetBar', data.budget_score],
+    ['bAuthority', 'bAuthorityBar', data.authority_score],
+    ['bNeed', 'bNeedBar', data.need_score],
+    ['bTimeline', 'bTimelineBar', data.timeline_score],
+  ];
+  bants.forEach(([labelId, barId, val]) => {
+    document.getElementById(labelId).textContent = `${val}/3`;
+    setTimeout(() => {
+      document.getElementById(barId).style.width = `${(val / 3) * 100}%`;
+    }, 300);
+  });
+
+  // Strengths
+  const sl = document.getElementById('strengthsList');
+  sl.innerHTML = (data.strengths || []).map(s =>
+    `<div class="bullet-row"><span class="bullet-dot" style="color:#10B981;">●</span><p class="bullet-text">${s}</p></div>`
+  ).join('');
+
+  // Risks
+  const rl = document.getElementById('risksList');
+  rl.innerHTML = (data.risks || []).map(r =>
+    `<div class="bullet-row"><span class="bullet-dot" style="color:#F59E0B;">●</span><p class="bullet-text">${r}</p></div>`
+  ).join('');
+
+  document.getElementById('resultsSection').style.display = 'block';
+  document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetForm() {
+  document.getElementById('resultsSection').style.display = 'none';
+  document.getElementById('fullName').value = '';
+  document.getElementById('email').value = '';
+  document.getElementById('company').value = '';
+  document.getElementById('phone').value = '';
+  document.getElementById('budget').value = '';
+  document.getElementById('authority').value = '';
+  document.getElementById('need').value = '';
+  document.getElementById('timeline').value = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function scoreBANT(budget, authority, need, timeline) {
+  // Budget scoring (0-3)
+  const budgetScores = {
+    "Under $10,000": 0,
+    "$10,000 – $50,000": 1,
+    "$50,000 – $100,000": 2,
+    "Over $100,000": 3
+  };
+
+  // Authority scoring (0-3)
+  const authorityScores = {
+    "Decision Maker": 3,
+    "Key Influencer": 2,
+    "Evaluating Options": 1,
+    "Just Researching": 0
+  };
+
+  // Timeline scoring (0-3)
+  const timelineScores = {
+    "Immediately": 3,
+    "Within 1–3 months": 2,
+    "Within 3–6 months": 1,
+    "6+ months away": 0
+  };
+
+  // Need scoring (0-3) based on keywords and length
+  const needLower = need.toLowerCase();
+  let needScore = 1;
+  const urgentKeywords = ['replace', 'automate', 'urgent', 'critical', 'immediately', 'asap', 'failing', 'broken', 'scale', 'growth'];
+  const strongKeywords = ['crm', 'pipeline', 'sales', 'revenue', 'leads', 'automation', 'qualify', 'score', 'process'];
+  urgentKeywords.forEach(k => { if (needLower.includes(k)) needScore = Math.min(3, needScore + 0.5); });
+  strongKeywords.forEach(k => { if (needLower.includes(k)) needScore = Math.min(3, needScore + 0.3); });
+  if (need.length > 100) needScore = Math.min(3, needScore + 0.5);
+  needScore = Math.round(Math.min(3, needScore));
+
+  const bScore = budgetScores[budget] ?? 0;
+  const aScore = authorityScores[authority] ?? 0;
+  const tScore = timelineScores[timeline] ?? 0;
+  const nScore = needScore;
+
+  // Weighted total: Budget 30%, Authority 30%, Need 20%, Timeline 20%
+  const weighted = (bScore * 0.3 + aScore * 0.3 + nScore * 0.2 + tScore * 0.2) * (10/3);
+  const score = Math.round(Math.min(10, Math.max(1, weighted)));
+  const tier = score >= 8 ? "Hot" : score >= 5 ? "Warm" : "Cold";
+
+  return { score, tier, budget_score: bScore, authority_score: aScore, need_score: nScore, timeline_score: tScore };
+}
+
+function generateSummary(name, company, budget, authority, need, timeline, score, tier) {
+  const authorityMap = {
+    "Decision Maker": "a decision-maker",
+    "Key Influencer": "a key influencer",
+    "Evaluating Options": "someone evaluating options",
+    "Just Researching": "currently in research mode"
+  };
+  const timelineMap = {
+    "Immediately": "an immediate implementation timeline",
+    "Within 1–3 months": "a 1–3 month implementation window",
+    "Within 3–6 months": "a 3–6 month timeline",
+    "6+ months away": "a longer-term timeline of 6+ months"
+  };
+
+  const authorityText = authorityMap[authority] || authority;
+  const timelineText = timelineMap[timeline] || timeline;
+
+  if (tier === "Hot") {
+    return `${name} at ${company} is ${authorityText} with a confirmed budget of ${budget} and ${timelineText}. Their need — "${need.substring(0, 80)}${need.length > 80 ? '...' : ''}" — aligns strongly with a sales-ready opportunity. This lead scores ${score}/10 and should be contacted immediately.`;
+  } else if (tier === "Warm") {
+    return `${name} at ${company} shows solid qualification signals as ${authorityText} with a ${budget} budget and ${timelineText}. The stated need is relevant but some BANT dimensions require further validation. Score ${score}/10 — follow up promptly to strengthen qualification.`;
+  } else {
+    return `${name} at ${company} is ${authorityText} with ${timelineText} and a ${budget} budget. While there is an expressed interest, the current BANT profile scores ${score}/10 and suggests this lead is not yet sales-ready. Nurture before investing significant sales time.`;
+  }
+}
+
+function generateNextStep(tier, authority, timeline) {
+  if (tier === "Hot") {
+    if (authority === "Decision Maker") return "Schedule an immediate discovery call or product demo. Send a personalised outreach email with a direct calendar link within the next 2 hours.";
+    return "Reach out within 24 hours to identify and involve the decision-maker. Request an intro call to assess full buying authority and confirm budget.";
+  } else if (tier === "Warm") {
+    if (timeline === "Within 1–3 months") return "Send a tailored case study or ROI one-pager within 48 hours. Follow up with a call to confirm budget approval and decision-making process.";
+    return "Add to a structured nurture sequence. Follow up in 2 weeks with relevant content and a soft call to understand their evaluation timeline better.";
+  } else {
+    return "Add to a long-term nurture email sequence. Re-engage in 60–90 days with educational content. Do not invest direct sales time until BANT signals strengthen.";
+  }
+}
+
+function generateStrengths(budget, authority, need, timeline, score) {
+  const strengths = [];
+  if (budget === "Over $100,000" || budget === "$50,000 – $100,000") strengths.push(`Strong budget signal: ${budget} confirmed`);
+  if (authority === "Decision Maker") strengths.push("Decision-maker confirmed — no additional sign-off required");
+  if (authority === "Key Influencer") strengths.push("Key influencer involved — strong internal champion");
+  if (timeline === "Immediately" || timeline === "Within 1–3 months") strengths.push(`Urgent timeline: ${timeline} — active buying cycle`);
+  if (need.length > 80) strengths.push("Clear and detailed business need articulated");
+  if (score >= 8) strengths.push("All four BANT dimensions score above threshold");
+  return strengths.slice(0, 3);
+}
+
+function generateRisks(budget, authority, need, timeline, score) {
+  const risks = [];
+  if (budget === "Under $10,000") risks.push("Budget too low for most enterprise solutions — confirm scope before proceeding");
+  if (authority === "Just Researching" || authority === "Evaluating Options") risks.push("No confirmed buying authority — decision-maker needs to be identified");
+  if (timeline === "6+ months away") risks.push("Long timeline increases risk of lead going cold or competitor winning");
+  if (need.length < 50) risks.push("Business need is vague — discovery call needed to surface a clear pain point");
+  if (score < 5) risks.push("Multiple weak BANT signals — not yet sales-ready");
+  return risks.slice(0, 2);
+}
+
+function submitLead() {
+  const errorBox = document.getElementById('errorBox');
+  const spinnerCard = document.getElementById('spinnerCard');
+  const resultsSection = document.getElementById('resultsSection');
+  const submitBtn = document.getElementById('submitBtn');
+
+  const fullName = document.getElementById('fullName').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const company = document.getElementById('company').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const budget = document.getElementById('budget').value;
+  const authority = document.getElementById('authority').value;
+  const need = document.getElementById('need').value.trim();
+  const timeline = document.getElementById('timeline').value;
+
+  errorBox.style.display = 'none';
+
+  if (!fullName || !email || !company || !budget || !authority || !need || !timeline) {
+    errorBox.textContent = 'Please fill in all required fields.';
+    errorBox.style.display = 'block';
+    return;
+  }
+
+  resultsSection.style.display = 'none';
+  spinnerCard.style.display = 'block';
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Analysing Lead…';
+
+  // Simulate AI processing delay
+  setTimeout(() => {
+    const { score, tier, budget_score, authority_score, need_score, timeline_score } = scoreBANT(budget, authority, need, timeline);
+    const summary = generateSummary(fullName, company, budget, authority, need, timeline, score, tier);
+    const nextStep = generateNextStep(tier, authority, timeline);
+    const strengths = generateStrengths(budget, authority, need, timeline, score);
+    const risks = generateRisks(budget, authority, need, timeline, score);
+
+    spinnerCard.style.display = 'none';
+    submitBtn.disabled = false;
+    submitBtn.textContent = '⚡ Score This Lead with AI';
+
+    renderResults({ score, tier, summary, nextStep, budget_score, authority_score, need_score, timeline_score, strengths, risks }, fullName, company);
+  }, 2200);
+}
+</script>
